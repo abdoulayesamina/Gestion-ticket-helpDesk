@@ -1,0 +1,13 @@
+# Environnement Python local (Windows), inutile et lourd dans l'image
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets : la configuration est injectée au lancement du conteneur
+.env
+
+# Fichiers sans intérêt pour l'exécution
+Dockerfile
+.dockerignore
+.gitignore
+.git/

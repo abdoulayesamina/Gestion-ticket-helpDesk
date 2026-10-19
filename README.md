@@ -106,6 +106,33 @@ Ouvrir ensuite <http://localhost:5173>.
 
 ---
 
+## Lancement avec Docker Compose
+
+Les trois composants tournent dans des conteneurs. Les valeurs sensibles sont lues depuis `helpdesk/.env` (modèle : [.env.example](.env.example)).
+
+```bash
+# Une seule fois : le volume est déclaré "external", il doit exister
+docker volume create helpdesk_data
+
+docker compose up -d --build                          # construit et démarre db, backend, frontend
+docker compose run --rm backend alembic upgrade head  # migrations (sans effet si déjà appliquées)
+docker compose run --rm backend python -m app.seed    # données de démo (sans effet si déjà présentes)
+```
+
+- Frontend : <http://localhost:5173>
+- API : <http://localhost:8000> (Swagger : <http://localhost:8000/docs>)
+- PostgreSQL : `localhost:5432` (pour DBeaver)
+
+```bash
+docker compose ps              # état des services
+docker compose logs -f backend # journaux du backend
+docker compose down            # arrête et supprime les conteneurs (le volume et les données restent)
+```
+
+> Ne lancez pas en même temps `uvicorn` ou `npm run dev` à la main : ils utilisent les mêmes ports (8000 et 5173).
+
+---
+
 ## Configuration
 
 ### Backend : [backend/.env.example](backend/.env.example)

@@ -1,0 +1,17 @@
+# Dépendances installées sous Windows : elles seront réinstallées pour Linux par npm ci
+node_modules/
+
+# Résultats de build locaux
+dist/
+*.tsbuildinfo
+
+# Configuration locale : l'URL de l'API est passée via --build-arg VITE_API_URL
+.env
+.env.*
+!.env.example
+
+# Fichiers sans intérêt pour le build
+Dockerfile
+.dockerignore
+.gitignore
+.git/
