@@ -1,0 +1,83 @@
+name: CI
+
+# Quand le pipeline se déclenche
+on:
+  push:
+    branches: ["**"]          # à chaque push, sur n'importe quelle branche
+  pull_request:               # et à chaque pull request
+  workflow_dispatch:          # + bouton "Run workflow" dans l'onglet Actions
+
+# Si un nouveau push arrive pendant qu'un pipeline tourne sur la même branche, on annule l'ancien
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------- 1. Le frontend compile-t-il ? ----------
+  frontend:
+    name: Frontend (TypeScript + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier les types TypeScript et construire
+        run: npm run build
+
+  # ---------- 2. Le backend Python est-il valide ? ----------
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Vérifier la syntaxe de tous les fichiers Python
+        run: python -m compileall -q app alembic
+
+      - name: Vérifier que l'application se charge (imports, configuration)
+        run: python -c "import app.main; print('Application chargée :', app.main.app.title)"
+
+  # ---------- 3. Les images Docker se construisent-elles ? ----------
+  docker:
+    name: Images Docker
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]   # ne démarre que si les deux jobs précédents ont réussi
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Construire l'image du backend
+        run: docker build -t helpdesk-backend:${{ github.sha }} ./backend
+
+      - name: Construire l'image du frontend
+        run: docker build --build-arg VITE_API_URL=http://localhost:8000 -t helpdesk-frontend:${{ github.sha }} ./frontend
+
+      - name: Afficher les images construites
+        run: docker images "helpdesk-*"
